@@ -17,6 +17,8 @@ export default class DefaultBrowserBehavior implements BrowserBehavior {
     safari: 12,
     opera: 66,
     samsung: 12,
+    crios: 86,
+    fxios: 23,
   };
 
   private browserName: { [id: string]: string } = {
@@ -28,6 +30,8 @@ export default class DefaultBrowserBehavior implements BrowserBehavior {
     safari: 'Safari',
     opera: 'Opera',
     samsung: 'Samsung Internet',
+    crios: 'Chrome iOS',
+    fxios: 'Firefox iOS',
   };
 
   private chromeLike: string[] = [
@@ -37,6 +41,9 @@ export default class DefaultBrowserBehavior implements BrowserBehavior {
     'opera',
     'samsung',
   ];
+
+  private webkitBrowsers: string[] = ['crios', 'fxios'];
+
   private enableUnifiedPlanForChromiumBasedBrowsers: boolean;
 
   constructor({
@@ -66,16 +73,28 @@ export default class DefaultBrowserBehavior implements BrowserBehavior {
     return false;
   }
 
+  hasWebKitWebRTC(): boolean {
+    for (const browser of this.webkitBrowsers) {
+      if (browser === this.browser.name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   hasFirefoxWebRTC(): boolean {
     return this.isFirefox();
   }
 
   supportsCanvasCapturedStreamPlayback(): boolean {
-    return !this.isIOSSafari();
+    return !this.isIOSSafari() && !this.isIOSChrome() && !this.isIOSFirefox();
   }
 
   requiresUnifiedPlan(): boolean {
-    let shouldEnable = (this.isSafari() && this.isUnifiedPlanSupported()) || this.isFirefox();
+    let shouldEnable =
+      (this.isSafari() && this.isUnifiedPlanSupported()) ||
+      this.isFirefox() ||
+      this.hasWebKitWebRTC();
     if (this.enableUnifiedPlanForChromiumBasedBrowsers) {
       shouldEnable = shouldEnable || this.hasChromiumWebRTC();
     }
@@ -90,7 +109,7 @@ export default class DefaultBrowserBehavior implements BrowserBehavior {
   }
 
   requiresCheckForSdpConnectionAttributes(): boolean {
-    return !this.isIOSSafari();
+    return !this.isIOSSafari() && !this.isIOSChrome() && !this.isIOSFirefox();
   }
 
   requiresIceCandidateGatheringTimeoutWorkaround(): boolean {
@@ -98,7 +117,8 @@ export default class DefaultBrowserBehavior implements BrowserBehavior {
   }
 
   requiresUnifiedPlanMunging(): boolean {
-    let shouldRequire = this.isSafari() && this.isUnifiedPlanSupported();
+    let shouldRequire =
+      (this.isSafari() && this.isUnifiedPlanSupported()) || this.hasWebKitWebRTC();
     if (this.enableUnifiedPlanForChromiumBasedBrowsers) {
       shouldRequire = shouldRequire || this.hasChromiumWebRTC();
     }
@@ -141,7 +161,7 @@ export default class DefaultBrowserBehavior implements BrowserBehavior {
   }
 
   screenShareUnsupported(): boolean {
-    if (this.isSafari()) {
+    if (this.isSafari() || this.isIOSChrome() || this.isIOSFirefox()) {
       return true;
     }
     return false;
@@ -206,6 +226,14 @@ export default class DefaultBrowserBehavior implements BrowserBehavior {
 
   private isFirefox(): boolean {
     return this.browser.name === 'firefox';
+  }
+
+  private isIOSFirefox(): boolean {
+    return this.browser.name === 'fxios';
+  }
+
+  private isIOSChrome(): boolean {
+    return this.browser.name === 'crios';
   }
 
   private isChrome(): boolean {
